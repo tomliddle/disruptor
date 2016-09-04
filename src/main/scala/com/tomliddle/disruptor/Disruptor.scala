@@ -1,5 +1,7 @@
 package com.tomliddle.disruptor
 
+import java.util.concurrent.TimeUnit
+
 object Disruptor {
   def main(args: Array[String]): Unit = {
     println("Hello, world!")
@@ -44,7 +46,7 @@ object CircularBuffer {
 	}
 }
 
-
+//https://lmax-exchange.github.io/disruptor/files/Disruptor-1.0.pdf
 trait RingBuffer[T] {
 
 	val consumers = IndexedSeq[Consumer[T]]()
@@ -68,7 +70,74 @@ class RingBufferImpl[T](val size: Int) extends RingBuffer[T] {
 		buffer(0)
 	}
 
+	// Claim
+
+	// Write
+
+	// Commit - allows all consumers to read, advance cursor
+
 }
+
+trait ProducerBarrier[T] {
+	def entry(sequence: Long): T
+
+	/** Delegate a call to the {@link RingBuffer#getCursor()}
+	  *
+	  *  @return value of the cursor for entries that have been published.
+	  */
+	def cursor: Long
+
+	/** Claim the next T in the ring buffer for a Producer
+	  */
+	def nextEntry: T
+
+
+	/** Commit to Ring buffer to make it visible
+	  */
+	def commit(entry: T)
+}
+
+trait ConsumerBarrier[T] {
+
+	def getEntry(sequence: Long): T
+
+	/** Wait for the given sequence to be available for consumption.
+	  *
+	  *  @param sequence to wait for
+	  *  @return the sequence up to which is available
+	  */
+	def waitFor(sequence: Long): Long
+
+	/** Wait for the given sequence to be available for consumption with a time out.
+	  *
+	  *  @param sequence to wait for
+	  *  @param timeout value
+	  *  @param units for the timeout value
+	  *  @return the sequence up to which is available
+	  */
+	def waitFor(sequence: Long, timeout: Long, units: TimeUnit): Long
+
+	/** Delegate a call to the {@link RingBuffer#getCursor()}
+	  *
+	  *  @return value of the cursor for entries that have been published.
+	  */
+	def getCursor: Long
+
+	/** The current alert status for the barrier.
+	  *
+	  *  @return true if in alert otherwise false.
+	  */
+	def isAlerted: Boolean
+
+	/** Alert the consumers of a status change and stay in this status until cleared.
+	  */
+	def alert()
+
+	/** Clear the current alert status.
+	  */
+	def clearAlert()
+}
+
 
 trait Producer[T] {
 
